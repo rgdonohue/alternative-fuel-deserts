@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset=utf-8 />
+<title>Routes</title>
+<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+<script src='https://api.mapbox.com/mapbox.js/v2.4.0/mapbox.js'></script>
+<script src='//api.tiles.mapbox.com/mapbox.js/plugins/turf/v2.0.0/turf.min.js'></script>
+<script src='https://api.mapbox.com/mapbox.js/plugins/mapbox-directions.js/v0.4.0/mapbox.directions.js'></script>
+
+
+<script   src="https://code.jquery.com/jquery-2.2.3.min.js"   integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo="   crossorigin="anonymous"></script>
+    
+    
+<link href='https://api.mapbox.com/mapbox.js/plugins/mapbox-directions.js/v0.4.0/mapbox.directions.css' rel='stylesheet' type='text/css' />
+    
+    
+<link href='https://api.mapbox.com/mapbox.js/v2.4.0/mapbox.css' rel='stylesheet' />
+<style>
+  body { margin:0; padding:0; }
+  #map { position:absolute; top:0; bottom:0; width:100%; }
+    #inputs,
+    #errors,
+    #inputs {
+        z-index: 10;
+        top: 10px;
+        left: 10px;
+    }
+    #errors {
+        z-index: 8;
+        opacity: 0;
+        padding: 10px;
+        border-radius: 0 0 3px 3px;
+        background: rgba(0,0,0,.25);
+        top: 90px;
+        left: 10px;
+    }
+</style>
+</head>
+    
+<body>
+    
+<div id='map'></div>
+    
+<script>
+    L.mapbox.accessToken = 'pk.eyJ1Ijoicmdkb25vaHVlIiwiYSI6Im5Ua3F4UzgifQ.PClcVzU5OUj17kuxqsY_Dg';
+
+
+    var map = L.mapbox.map('map', 'mapbox.light')
+        .setView([39.7, -104.9], 4);
+    
+    var stationsDataLayer,
+        stationsLayer = L.geoJson();
+    
+    $.getJSON('https://rgdonohue.cartodb.com/api/v2/sql?format=GeoJSON&q=SELECT * FROM stations', function(data) {
+        mapStations(data);
+    });
+    
+    function mapStations(data) {
+        stationsDataLayer = L.geoJson(data);
+        
+        findRoute();
+    }
+    
+    function findRoute() {
+    
+        var directions = L.mapbox.directions();
+
+        var directionsLayer = L.mapbox.directions.layer(directions)
+            .addTo(map);
+
+//        var directionsInputControl = L.mapbox.directions.inputControl('inputs', directions)
+//            .addTo(map);
+//
+//        var directionsErrorsControl = L.mapbox.directions.errorsControl('errors', directions)
+//            .addTo(map);
+//
+        var directionsRoutesControl = L.mapbox.directions.routesControl('routes', directions)
+            .addTo(map);
+
+        L.mapbox.directions.layer(directions);
+
+        directions.on('load', function(e) {
+
+//            stationsLayer.eachLayer(function(layer) {
+//                stationsLayer.removeLayer(layer);
+//            });
+
+            var lineFeature = {
+              "type": "Feature",
+              "properties": {}
+            };
+            
+            lineFeature.geometry = e.routes[0].geometry;
+
+            var routeBuffered = turf.buffer(lineFeature, 2, 'miles');
+
+            stationsDataLayer.eachLayer(function(layer) {
+
+                if(turf.inside(layer.feature,routeBuffered.features[0])){
+                    layer.addTo(stationsLayer);
+                    //stationsLayer.addData(turf.pointOnLine(lineFeature, layer.feature))
+                } 
+
+            });
+
+            var stationNum = 0;
+            stationsLayer.eachLayer(function(layer) {
+                directions.addWaypoint(stationNum, turf.pointOnLine(lineFeature, layer.feature))
+            });
+            
+            var closeFeatures = [],
+                farFeatures = [];
+            
+            for(var i = 0; i < directions._waypoints.length; i++) {
+                
+                var currentWayPoint = directions._waypoints[i],
+                    nextWayPoint = directions._waypoints[i + 1];
+                
+                if(i === 0) {
+                    var slice = turf.lineSlice(directions.getOrigin(), currentWayPoint, lineFeature);
+                    
+                } else if (i === directions._waypoints.length - 1) {
+                    var slice = turf.lineSlice(currentWayPoint, directions.getDestination(), lineFeature);
+                } else {
+                   var slice = turf.lineSlice(currentWayPoint, nextWayPoint, lineFeature); 
+                }
+                
+                if(turf.lineDistance(slice, 'miles') < 240) {
+                    closeFeatures.push(currentWayPoint); 
+                } else {
+                   farFeatures.push(currentWayPoint);
+                }
+            }
+            
+            var closeFeatureCollection = turf.featurecollection(closeFeatures),
+                farFeatureCollection = turf.featurecollection(farFeatures);
+            
+            var stationsClose = L.geoJson(closeFeatureCollection, {
+                pointToLayer : function(feature, ll) {
+                    return L.marker(ll, {
+                         icon: L.icon({
+                            iconUrl: 'fuel-go.svg',
+                            iconSize: [30, 30]
+                        })
+                     })
+                }
+            }).addTo(map);
+            
+            var stationsFar = L.geoJson(farFeatureCollection, {
+                pointToLayer : function(feature, ll) {
+                    return L.marker(ll, {
+                     icon: L.icon({
+                        iconUrl: 'fuel-stop.svg',
+                        iconSize: [30, 30]
+                        })
+                    })     
+                 }
+            }).addTo(map);
+
+        }); // done on load
+        
+    } // end findRoute
+    
+    
+    
+    
+</script>
+</body>
+</html>

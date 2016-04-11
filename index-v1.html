@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset=utf-8 />
+<title>Isodistances</title>
+<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+<script src='https://api.mapbox.com/mapbox.js/v2.4.0/mapbox.js'></script>
+<script src='//api.tiles.mapbox.com/mapbox.js/plugins/turf/v2.0.0/turf.min.js'></script>
+<script src='https://api.mapbox.com/mapbox.js/plugins/mapbox-directions.js/v0.4.0/mapbox.directions.js'></script>
+
+<script   src="https://code.jquery.com/jquery-2.2.3.min.js"   integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo="   crossorigin="anonymous"></script>
+    
+    
+<link href='https://api.mapbox.com/mapbox.js/plugins/mapbox-directions.js/v0.4.0/mapbox.directions.css' rel='stylesheet' type='text/css' />
+    
+    
+<link href='https://api.mapbox.com/mapbox.js/v2.4.0/mapbox.css' rel='stylesheet' />
+<style>
+  body { margin:0; padding:0; }
+  #map { position:absolute; top:0; bottom:0; width:100%; }
+</style>
+</head>
+    
+<body>
+    
+<div id='map'></div>
+    
+<script>
+    L.mapbox.accessToken = 'pk.eyJ1Ijoicmdkb25vaHVlIiwiYSI6Im5Ua3F4UzgifQ.PClcVzU5OUj17kuxqsY_Dg';
+    
+//    var mapboxClient = new MapboxClient('pk.eyJ1Ijoicmdkb25vaHVlIiwiYSI6Im5Ua3F4UzgifQ.PClcVzU5OUj17kuxqsY_Dg');
+
+    var map = L.mapbox.map('map', 'mapbox.streets')
+        .setView([39.7, -104.9], 4);
+    
+//    var extent = [-105.38, 39.45, -104.63, 39.97];
+//    var cellWidth = 1;
+//    var units = 'miles';
+//
+//    var grid = turf.pointGrid(extent, cellWidth, units);
+//    
+//    var pointGrid = L.geoJson(grid, {
+//        pointToLayer : function(feature,ll) {
+//            return L.circle(ll,1);
+//        }
+//    }).addTo(map);
+//    
+//    var origin = L.marker([39.7, -104.9]).addTo(map);
+//    
+//    var directions = L.mapbox.directions({
+//        profile : 'mapbox.driving',
+//        units : 'imperial'
+//    });
+    
+//    map.on('click', function(e) {
+//        console.log(e.latlng)
+//    })
+    
+//    directions.setOrigin(origin.getLatLng())
+//    
+//    var destination = L.marker([39.73, -105.07]).addTo(map);
+//    
+//    directions.setDestination(destination.getLatLng());
+//    
+//    directions.query({}, function(err, results) {
+//        console.log(results)
+//    });
+//    
+//    directions.on('load', function(e) {
+//        console.log(e.routes[0].distance);
+//    })
+    
+$.getJSON('https://developer.nrel.gov/api/alt-fuel-stations/v1.json?api_key=AJ2mAlEfGgffKAYgWrA4wI3ND4uwKhwbDaEFGXAH&status=E&access=public&fuel_type=ELEC&state=CO', function(data) {
+    var stations = data.fuel_stations.map(function(station) {
+        
+        return {"type":"Feature","properties":{"access_days_time":station.access_days_time,"city":station.city,"station_name":station.station_name,"station_phone":station.station_phone,street_address: station.street_address},"geometry":{"type":"Point","coordinates":[station.longitude,station.latitude]}}
+        
+    });
+    
+    var geoJson = {"type":"FeatureCollection","features":stations};
+    L.geoJson(geoJson).addTo(map);
+});
+    
+//    for(var i = 0; i < grid.features.length; i++) {
+//        
+//        directions.setDestination(L.latLng(grid.features[i].geometry.coordinates));
+//        directions.query();
+//        console.log('just queried')
+//        directions.on('load', function(e) {
+//            console.log(e.routes[0].distance);
+//        })
+//        console.log('after on')
+//        
+//    }
+    
+//    pointGrid.eachLayer(function(layer) {
+//        
+//        directions.setDestination(layer.getLatLng());
+//        directions.query();
+//        console.log('just queried')
+//        directions.on('load', function(e) {
+//            console.log(e.routes[0].distance);
+//        })
+//        console.log('after on')
+//        
+//    });
+    
+    
+    
+</script>
+</body>
+</html>
